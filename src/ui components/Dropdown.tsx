@@ -26,7 +26,12 @@ export function DropdownComponent({ components }: DropdownComponentProps) {
     setValue(newValue);
   }
   return (
-    <Dropdown onChange={handleChange} options={dropdownOptions} value={value} />
+    <Dropdown
+      onChange={handleChange}
+      options={dropdownOptions}
+      value={value}
+      placeholder="Select component..."
+    />
   );
 }
 function createDropdownOptions(strings: string[]): Array<DropdownOption> {

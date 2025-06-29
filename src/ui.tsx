@@ -14,8 +14,9 @@ function Plugin() {
   const [propNames, setPropNames] = useState<string[]>([]);
 
   useEffect(() => {
+    const keys = componentProps ? Object.keys(componentProps) : [];
     console.log("Component props>>> ", componentProps);
-    setPropNames(Object.keys(componentProps));
+    setPropNames(keys);
   }, [componentProps]);
 
   useEffect(() => {
@@ -28,10 +29,10 @@ function Plugin() {
     <Container space="medium">
       <VerticalSpace space="small" />
       <DropdownComponent {...components} />
-      {!!propNames.length &&
-        propNames.map((propName) => {
-          return <p>{componentProps[propName]}</p>;
-        })}
+      {propNames.length > 0 &&
+        propNames.map((propName) => (
+          <p key={propName}>{componentProps[propName]?.name}</p>
+        ))}
       <VerticalSpace space="small" />
     </Container>
   );

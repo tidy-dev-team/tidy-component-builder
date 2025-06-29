@@ -1,12 +1,16 @@
 type CheckboxData = {
   size: "s" | "m";
   isLabel: boolean;
-  label: string;
+  label: StringPropData;
+};
+
+type StringPropData = {
+  text: string;
+  visible: boolean;
 };
 
 export const checkboxData: CheckboxData = {
   size: "m",
   isLabel: true,
-  label: "Checkbox",
+  label: { text: "Checkbox", visible: this.isLabel },
 };
-//

@@ -1,40 +1,37 @@
-import {
-  Button,
-  Columns,
-  Container,
-  Muted,
-  render,
-  Text,
-  TextboxNumeric,
-  VerticalSpace,
-} from "@create-figma-plugin/ui";
+import { Container, render, VerticalSpace } from "@create-figma-plugin/ui";
 import { emit } from "@create-figma-plugin/utilities";
 import { h } from "preact";
-import { useCallback, useState } from "preact/hooks";
 import { components } from "./componentData";
+import { useAtom } from "jotai";
+import { useState } from "preact/hooks";
 
-import { CloseHandler, CreateRectanglesHandler } from "./types";
 import { DropdownComponent } from "./ui components/Dropdown";
+import { selectedComponentPropertiesAtom } from "./state/atoms";
+import { useEffect } from "preact/hooks";
 
 function Plugin() {
-  const [count, setCount] = useState<number | null>(5);
-  const [countString, setCountString] = useState("5");
-  const handleCreateRectanglesButtonClick = useCallback(
-    function () {
-      if (count !== null) {
-        emit<CreateRectanglesHandler>("CREATE_RECTANGLES", count);
-      }
-    },
-    [count]
-  );
-  const handleCloseButtonClick = useCallback(function () {
-    emit<CloseHandler>("CLOSE");
-  }, []);
+  const [componentProps] = useAtom(selectedComponentPropertiesAtom);
+  const [propNames, setPropNames] = useState<string[]>([]);
+
+  useEffect(() => {
+    console.log("Component props>>> ", componentProps);
+    setPropNames(Object.keys(componentProps));
+  }, [componentProps]);
+
+  useEffect(() => {
+    propNames.forEach((propName) => {
+      console.log(componentProps[propName]);
+    });
+  }, [propNames]);
+
   return (
     <Container space="medium">
       <VerticalSpace space="small" />
-      <DropdownComponent components={Object.keys(components)} />
-
+      <DropdownComponent {...components} />
+      {!!propNames.length &&
+        propNames.map((propName) => {
+          return <p>{componentProps[propName]}</p>;
+        })}
       <VerticalSpace space="small" />
     </Container>
   );

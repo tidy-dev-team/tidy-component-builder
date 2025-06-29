@@ -5,16 +5,16 @@ import { Dropdown, DropdownOption } from "@create-figma-plugin/ui";
 import {
   initializedSelectedComponentAtom,
   availableComponentsAtom,
+  selectedComponentPropertiesAtom,
 } from "../state/atoms";
+import { ComponentDataMap } from "../componentData";
 
-interface DropdownComponentProps {
-  components: string[];
-}
-
-export function DropdownComponent({ components }: DropdownComponentProps) {
+export function DropdownComponent(componentsObject: ComponentDataMap) {
+  const components = Object.keys(componentsObject);
   const dropdownOptions = createDropdownOptions(components);
   const [value, setValue] = useAtom(initializedSelectedComponentAtom);
   const [, setAvailableComponents] = useAtom(availableComponentsAtom);
+  const [, setComponentProps] = useAtom(selectedComponentPropertiesAtom);
 
   useEffect(() => {
     setAvailableComponents(components);
@@ -22,7 +22,11 @@ export function DropdownComponent({ components }: DropdownComponentProps) {
 
   function handleChange(event: JSX.TargetedEvent<HTMLInputElement>) {
     const newValue = event.currentTarget.value;
-    console.log(newValue);
+    const componentPropsObject =
+      componentsObject[newValue as keyof typeof componentsObject];
+    if (componentPropsObject) {
+      setComponentProps(componentPropsObject);
+    }
     setValue(newValue);
   }
   return (

@@ -5,3 +5,5 @@ export const availableComponentsAtom = atom<string[]>([]);
 export const selectedComponentAtom = atom<string | null>((get) => {
   return get(initializedSelectedComponentAtom);
 });
+
+export const selectedComponentPropertiesAtom = atom<any>({});

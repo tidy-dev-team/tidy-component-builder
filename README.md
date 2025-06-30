@@ -7,12 +7,14 @@ A Figma plugin for building custom components with configurable properties. This
 **Current Implementation:** UI Configuration Phase
 - ✅ Component selection dropdown
 - ✅ Property configuration with checkboxes
+- ✅ Property usage tracking (`used` property)
+- ✅ Dependency mapping with visual indicators
 - ✅ State management with Jotai
 - ⏳ Canvas rendering (planned)
 
 **Next Phase:** Canvas Generation
 - Build selected components on Figma canvas based on UI configurations
-- Apply property values and variants
+- Apply property values and variants using API-ready camelCase names
 - Position and style components automatically
 
 ## Features
@@ -20,12 +22,15 @@ A Figma plugin for building custom components with configurable properties. This
 ### Currently Available
 - **Component Selection**: Choose from available component templates via dropdown
 - **Property Configuration**: Toggle component properties using intuitive checkboxes
+- **Usage Tracking**: Control which properties are "used" through checkbox interactions
+- **Dependency Visualization**: Visual indicators showing property dependencies (✏️, 🔁)
 - **State Management**: Persistent property states across component selections
 - **Type Safety**: Full TypeScript support with proper interfaces
+- **API-Ready Names**: CamelCase property names for Figma plugin API integration
 
 ### Planned Features
 - **Canvas Rendering**: Generate actual Figma components based on selections
-- **Property Application**: Apply configured values to generated components
+- **Property Application**: Apply configured values to generated components using dependency mapping
 - **Variant Support**: Handle component variants and states
 - **Batch Generation**: Create multiple component instances
 
@@ -104,8 +109,8 @@ This generates:
 ## Usage
 
 1. **Select Component**: Choose a component type from the dropdown
-2. **Configure Properties**: Toggle checkboxes to enable/disable component properties
-3. **Build Component**: Click "Build on canvas" (currently logs to console)
+2. **Configure Properties**: Toggle checkboxes to mark properties as "used" or "unused"
+3. **Build Component**: Click "Build on canvas" (currently logs configuration to console)
 
 ### Currently Supported Components
 
@@ -122,26 +127,38 @@ This generates:
 ### Component Data Structure
 ```typescript
 interface ComponentProperty {
-  name: string           // Display name
-  value: string | boolean // Default value
-  visible: boolean       // Show in UI
-  isProperty: boolean    // Default property state
-  variants?: string[]    // Available variants
+  name: string              // camelCase API name (e.g., "isIndeterminate")
+  displayName: string       // UI display name (e.g., "Is Indeterminate")
+  value: string | boolean   // Default value
+  used: boolean            // Whether property is used by default
+  dependentProperty?: string // Dependency indicator (e.g., "✏️ isIndeterminate")
+  variants?: string[]      // Available variants
 }
 ```
+
+### Property Types
+- **name**: CamelCase identifier used for Figma API calls
+- **displayName**: Human-readable label shown in UI
+- **used**: Boolean indicating if property should be applied to component
+- **dependentProperty**: Visual indicator showing dependency relationships:
+  - `✏️ propertyName` - Editable/configurable property
+  - `🔁 propertyName` - Reactive/dependent property
 
 ## Roadmap
 
 ### Phase 1: UI Foundation ✅
 - [x] Component selection interface
 - [x] Property configuration system
-- [x] State management
+- [x] Usage tracking with checkboxes
+- [x] Dependency mapping system
+- [x] State management optimization
 - [x] Type safety improvements
 
 ### Phase 2: Canvas Integration (Next)
-- [ ] Implement canvas component generation
-- [ ] Apply property values to generated components
+- [ ] Implement canvas component generation using Figma API
+- [ ] Apply property values to generated components using camelCase names
 - [ ] Handle component variants and states
+- [ ] Utilize dependency mapping for property relationships
 - [ ] Add positioning and layout logic
 
 ### Phase 3: Enhanced Features (Future)
@@ -149,6 +166,7 @@ interface ComponentProperty {
 - [ ] Batch component generation
 - [ ] Export/import configurations
 - [ ] Advanced styling options
+- [ ] Property validation and constraints
 
 ## Technical Details
 
@@ -156,13 +174,20 @@ interface ComponentProperty {
 Uses Jotai atoms for efficient state management:
 - `selectedComponentAtom`: Currently selected component
 - `selectedComponentPropertiesAtom`: Properties of selected component
-- `propertyStatesAtom`: Current checkbox states
-- `updatedComponentPropertiesAtom`: Computed final component data
+- `propertyUsedStatesAtom`: Current checkbox (used) states
+- `updatedComponentPropertiesAtom`: Computed final component data with applied states
+
+### Property System
+- **Dual Naming**: Each property has both `name` (API) and `displayName` (UI)
+- **Usage Tracking**: `used` boolean controls whether property is applied
+- **Dependency Mapping**: `dependentProperty` shows relationships between properties
+- **Type Safety**: Full TypeScript interfaces prevent runtime errors
 
 ### Performance Optimizations
 - Atomic state updates prevent unnecessary re-renders
 - Efficient object spread operations instead of deep cloning
 - Optimized dependency arrays in React hooks
+- Conditional rendering for unused properties
 
 ## Resources
 

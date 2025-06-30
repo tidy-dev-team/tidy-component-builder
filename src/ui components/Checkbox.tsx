@@ -4,7 +4,7 @@ import { Checkbox, Text } from "@create-figma-plugin/ui";
 import { useAtom } from "jotai";
 import {
   selectedComponentPropertiesAtom,
-  propertyStatesAtom,
+  propertyUsedStatesAtom,
 } from "../state/atoms";
 
 interface CheckboxComponentProps {
@@ -13,28 +13,28 @@ interface CheckboxComponentProps {
 
 export function CheckboxComponent({ propertyKey }: CheckboxComponentProps) {
   const [componentProps] = useAtom(selectedComponentPropertiesAtom);
-  const [propertyStates, setPropertyStates] = useAtom(propertyStatesAtom);
+  const [propertyUsedStates, setPropertyUsedStates] = useAtom(propertyUsedStatesAtom);
   const property = componentProps[propertyKey];
   
   const [value, setValue] = useState<boolean>(() => 
-    propertyStates[propertyKey] ?? property?.isProperty ?? true
+    propertyUsedStates[propertyKey] ?? property?.used ?? true
   );
 
   useEffect(() => {
-    if (property && !(propertyKey in propertyStates)) {
-      const initialState = property.isProperty;
+    if (property && !(propertyKey in propertyUsedStates)) {
+      const initialState = property.used;
       setValue(initialState);
-      setPropertyStates((prev) => ({
+      setPropertyUsedStates((prev) => ({
         ...prev,
         [propertyKey]: initialState,
       }));
     }
-  }, [property, propertyKey, setPropertyStates]);
+  }, [property, propertyKey, setPropertyUsedStates]);
 
   function handleChange(event: JSX.TargetedEvent<HTMLInputElement>) {
     const newValue = event.currentTarget.checked;
     setValue(newValue);
-    setPropertyStates((prev) => ({
+    setPropertyUsedStates((prev) => ({
       ...prev,
       [propertyKey]: newValue,
     }));
@@ -46,7 +46,7 @@ export function CheckboxComponent({ propertyKey }: CheckboxComponentProps) {
 
   return (
     <Checkbox onChange={handleChange} value={value}>
-      <Text>{property.name}</Text>
+      <Text>{property.displayName}</Text>
     </Checkbox>
   );
 }

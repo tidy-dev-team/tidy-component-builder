@@ -9,7 +9,7 @@ export function ButtonComponent({
   callback,
 }: ButtonComponentProps): JSX.Element {
   return (
-    <Button fullWidth onClick={callback}>
+    <Button fullWidth onClick={callback} style={{ height: "32px" }}>
       Build on canvas
     </Button>
   );

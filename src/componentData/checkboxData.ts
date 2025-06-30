@@ -51,7 +51,7 @@ export const checkboxData: CheckboxData = {
   description: createProperty("description", true, "description"),
   icon: createProperty(
     "icon",
-    false,
+    true,
     '<svg width="12" height="12" viewBox="0 0 12 12">…</svg>'
   ),
   isIndeterminate: createProperty("indeterminate", false, true),

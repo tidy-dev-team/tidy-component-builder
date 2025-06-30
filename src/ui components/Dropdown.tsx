@@ -9,7 +9,13 @@ import {
 } from "../state/atoms";
 import { ComponentDataMap } from "../componentData";
 
-export function DropdownComponent(componentsObject: ComponentDataMap) {
+interface DropdownComponentProps {
+  components: ComponentDataMap;
+}
+
+export function DropdownComponent({
+  components: componentsObject,
+}: DropdownComponentProps) {
   const components = Object.keys(componentsObject);
   const dropdownOptions = createDropdownOptions(components);
   const [value, setValue] = useAtom(initializedSelectedComponentAtom);

@@ -4,7 +4,7 @@ import { Checkbox, Text, useInitialFocus } from "@create-figma-plugin/ui";
 import { useAtom } from "jotai";
 import {
   selectedComponentPropertiesAtom,
-  propertyStatesAtom,
+  currentPropertyStatesAtom,
 } from "../state/atoms";
 
 interface CheckboxComponentProps {
@@ -13,14 +13,15 @@ interface CheckboxComponentProps {
 export function CheckboxComponent({ label }: CheckboxComponentProps) {
   const [value, setValue] = useState<boolean>(true);
   const [componentProps] = useAtom(selectedComponentPropertiesAtom);
-  const [propertyStates, setPropertyStates] = useAtom(propertyStatesAtom);
+  const [currentStates, setCurrentStates] = useAtom(currentPropertyStatesAtom);
 
   useEffect(() => {
-    if (Object.keys(componentProps).length > 0) {
-      const propKey = label.toLowerCase();
+    const propKey = label.toLowerCase();
+    // Initialize from component properties when they change
+    if (componentProps[propKey]) {
       const initialState = componentProps[propKey]?.isProperty ?? true;
       setValue(initialState);
-      setPropertyStates((prev) => ({
+      setCurrentStates((prev) => ({
         ...prev,
         [propKey]: initialState,
       }));
@@ -31,7 +32,7 @@ export function CheckboxComponent({ label }: CheckboxComponentProps) {
     const newValue = event.currentTarget.checked;
     const propKey = label.toLowerCase();
     setValue(newValue);
-    setPropertyStates((prev) => ({
+    setCurrentStates((prev) => ({
       ...prev,
       [propKey]: newValue,
     }));

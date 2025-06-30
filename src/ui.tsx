@@ -7,41 +7,51 @@ import { useState } from "preact/hooks";
 
 import { DropdownComponent } from "./ui components/Dropdown";
 import { CheckboxComponent } from "./ui components/Checkbox";
-import { selectedComponentPropertiesAtom } from "./state/atoms";
+import { ButtonComponent } from "./ui components/Button";
+import {
+  selectedComponentPropertiesAtom,
+  updatedComponentPropertiesAtom,
+} from "./state/atoms";
 import { useEffect } from "preact/hooks";
 
 function Plugin() {
   const [componentProps] = useAtom(selectedComponentPropertiesAtom);
   const [propNames, setPropNames] = useState<string[]>([]);
+  const [updatedComponentProps] = useAtom(updatedComponentPropertiesAtom);
 
   useEffect(() => {
     const keys = componentProps ? Object.keys(componentProps) : [];
-    // console.log("Component props>>> ", componentProps);
     setPropNames(keys);
   }, [componentProps]);
 
-  // useEffect(() => {
-  //   propNames.forEach((propName) => {
-  //     console.log(componentProps[propName]);
-  //   });
-  // }, [propNames]);
+  function handleButtonClick() {
+    emit("BUILD", updatedComponentProps);
+  }
 
   return (
-    <Container space="medium">
-      <VerticalSpace space="small" />
-      <DropdownComponent {...components} />
-      <VerticalSpace space="large" />
-      {propNames.length > 0 &&
-        propNames.map((propName) => (
-          <div>
-            <CheckboxComponent
-              key={propName}
-              label={(componentProps[propName]?.name || propName) as string}
-            />
-            <VerticalSpace space="small" />
-          </div>
-        ))}
-      <VerticalSpace space="small" />
+    <Container
+      space="medium"
+      style={{ height: "100vh", display: "flex", flexDirection: "column" }}
+    >
+      <div>
+        <VerticalSpace space="small" />
+        <DropdownComponent components={components} />
+        <VerticalSpace space="large" />
+        {propNames.length > 0 &&
+          propNames.map((propName) => (
+            <div key={propName}>
+              <CheckboxComponent
+                label={(componentProps[propName]?.name || propName) as string}
+              />
+              <VerticalSpace space="small" />
+            </div>
+          ))}
+      </div>
+      <div style={{ flexGrow: 1 }}></div>
+      <div>
+        <ButtonComponent callback={handleButtonClick} />
+        <VerticalSpace space="small" />
+      </div>
     </Container>
   );
 }

@@ -1,9 +1,11 @@
 import { on, showUI } from "@create-figma-plugin/utilities";
-
-import { CloseHandler, CreateRectanglesHandler } from "./types";
+import { BuildHandler, CloseHandler } from "./types";
 
 export default function () {
-  on("BUILD", (data) => console.log("In main.ts...", data));
+  on<BuildHandler>("BUILD", (data) => {
+    console.log("Building component with data:", data);
+  });
+  
   showUI({
     height: 360,
     width: 320,

@@ -1,46 +1,52 @@
 import { h, JSX } from "preact";
 import { useEffect, useState } from "preact/hooks";
-import { Checkbox, Text, useInitialFocus } from "@create-figma-plugin/ui";
+import { Checkbox, Text } from "@create-figma-plugin/ui";
 import { useAtom } from "jotai";
 import {
   selectedComponentPropertiesAtom,
-  currentPropertyStatesAtom,
+  propertyStatesAtom,
 } from "../state/atoms";
 
 interface CheckboxComponentProps {
-  label: string;
+  propertyKey: string;
 }
-export function CheckboxComponent({ label }: CheckboxComponentProps) {
-  const [value, setValue] = useState<boolean>(true);
+
+export function CheckboxComponent({ propertyKey }: CheckboxComponentProps) {
   const [componentProps] = useAtom(selectedComponentPropertiesAtom);
-  const [currentStates, setCurrentStates] = useAtom(currentPropertyStatesAtom);
+  const [propertyStates, setPropertyStates] = useAtom(propertyStatesAtom);
+  const property = componentProps[propertyKey];
+  
+  const [value, setValue] = useState<boolean>(() => 
+    propertyStates[propertyKey] ?? property?.isProperty ?? true
+  );
 
   useEffect(() => {
-    const propKey = label.toLowerCase();
-    // Initialize from component properties when they change
-    if (componentProps[propKey]) {
-      const initialState = componentProps[propKey]?.isProperty ?? true;
+    if (property && !(propertyKey in propertyStates)) {
+      const initialState = property.isProperty;
       setValue(initialState);
-      setCurrentStates((prev) => ({
+      setPropertyStates((prev) => ({
         ...prev,
-        [propKey]: initialState,
+        [propertyKey]: initialState,
       }));
     }
-  }, [componentProps, label]);
+  }, [property, propertyKey, setPropertyStates]);
 
   function handleChange(event: JSX.TargetedEvent<HTMLInputElement>) {
     const newValue = event.currentTarget.checked;
-    const propKey = label.toLowerCase();
     setValue(newValue);
-    setCurrentStates((prev) => ({
+    setPropertyStates((prev) => ({
       ...prev,
-      [propKey]: newValue,
+      [propertyKey]: newValue,
     }));
   }
 
+  if (!property) {
+    return null;
+  }
+
   return (
-    <Checkbox {...useInitialFocus()} onChange={handleChange} value={value}>
-      <Text>{label}</Text>
+    <Checkbox onChange={handleChange} value={value}>
+      <Text>{property.name}</Text>
     </Checkbox>
   );
 }

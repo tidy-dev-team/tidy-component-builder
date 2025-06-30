@@ -1,28 +1,23 @@
 import { atom } from "jotai";
+import { ComponentProperties } from "../types";
 
-export const initializedSelectedComponentAtom = atom<string | null>(null);
-export const availableComponentsAtom = atom<string[]>([]);
-export const selectedComponentAtom = atom<string | null>((get) => {
-  return get(initializedSelectedComponentAtom);
-});
+export const selectedComponentAtom = atom<string | null>(null);
 
-export const selectedComponentPropertiesAtom = atom<any>({});
-// Writable atom for tracking current checkbox states
-export const currentPropertyStatesAtom = atom<Record<string, boolean>>({});
+export const selectedComponentPropertiesAtom = atom<ComponentProperties>({});
 
-// Atom that contains the full component data with updated isProperty values
-export const updatedComponentPropertiesAtom = atom<any>((get) => {
+export const propertyStatesAtom = atom<Record<string, boolean>>({});
+
+export const updatedComponentPropertiesAtom = atom<ComponentProperties>((get) => {
   const originalProps = get(selectedComponentPropertiesAtom);
-  const checkboxStates = get(currentPropertyStatesAtom);
+  const checkboxStates = get(propertyStatesAtom);
 
-  // Create a deep copy of original properties
-  const updatedProps = JSON.parse(JSON.stringify(originalProps));
-
-  // Update isProperty values based on checkbox states
-  Object.keys(updatedProps).forEach((key) => {
-    if (checkboxStates[key] !== undefined) {
-      updatedProps[key].isProperty = checkboxStates[key];
-    }
+  const updatedProps: ComponentProperties = {};
+  
+  Object.entries(originalProps).forEach(([key, property]) => {
+    updatedProps[key] = {
+      ...property,
+      isProperty: checkboxStates[key] ?? property.isProperty,
+    };
   });
 
   return updatedProps;

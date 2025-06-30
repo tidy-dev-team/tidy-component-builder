@@ -3,7 +3,6 @@ import { emit } from "@create-figma-plugin/utilities";
 import { h } from "preact";
 import { components } from "./componentData";
 import { useAtom } from "jotai";
-import { useState } from "preact/hooks";
 
 import { DropdownComponent } from "./ui components/Dropdown";
 import { CheckboxComponent } from "./ui components/Checkbox";
@@ -12,17 +11,12 @@ import {
   selectedComponentPropertiesAtom,
   updatedComponentPropertiesAtom,
 } from "./state/atoms";
-import { useEffect } from "preact/hooks";
 
 function Plugin() {
   const [componentProps] = useAtom(selectedComponentPropertiesAtom);
-  const [propNames, setPropNames] = useState<string[]>([]);
   const [updatedComponentProps] = useAtom(updatedComponentPropertiesAtom);
-
-  useEffect(() => {
-    const keys = componentProps ? Object.keys(componentProps) : [];
-    setPropNames(keys);
-  }, [componentProps]);
+  
+  const propertyKeys = Object.keys(componentProps);
 
   function handleButtonClick() {
     emit("BUILD", updatedComponentProps);
@@ -37,15 +31,12 @@ function Plugin() {
         <VerticalSpace space="small" />
         <DropdownComponent components={components} />
         <VerticalSpace space="large" />
-        {propNames.length > 0 &&
-          propNames.map((propName) => (
-            <div key={propName}>
-              <CheckboxComponent
-                label={(componentProps[propName]?.name || propName) as string}
-              />
-              <VerticalSpace space="small" />
-            </div>
-          ))}
+        {propertyKeys.map((propertyKey) => (
+          <div key={propertyKey}>
+            <CheckboxComponent propertyKey={propertyKey} />
+            <VerticalSpace space="small" />
+          </div>
+        ))}
       </div>
       <div style={{ flexGrow: 1 }}></div>
       <div>

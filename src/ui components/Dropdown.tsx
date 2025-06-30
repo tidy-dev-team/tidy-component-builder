@@ -1,40 +1,33 @@
 import { h, JSX } from "preact";
 import { useAtom } from "jotai";
-import { useEffect } from "preact/hooks";
 import { Dropdown, DropdownOption } from "@create-figma-plugin/ui";
 import {
-  initializedSelectedComponentAtom,
-  availableComponentsAtom,
+  selectedComponentAtom,
   selectedComponentPropertiesAtom,
 } from "../state/atoms";
-import { ComponentDataMap } from "../componentData";
+import { ComponentDataMap } from "../types";
 
 interface DropdownComponentProps {
   components: ComponentDataMap;
 }
 
 export function DropdownComponent({
-  components: componentsObject,
+  components,
 }: DropdownComponentProps) {
-  const components = Object.keys(componentsObject);
-  const dropdownOptions = createDropdownOptions(components);
-  const [value, setValue] = useAtom(initializedSelectedComponentAtom);
-  const [, setAvailableComponents] = useAtom(availableComponentsAtom);
+  const componentNames = Object.keys(components);
+  const dropdownOptions = componentNames.map((name): DropdownOption => ({ value: name }));
+  const [value, setValue] = useAtom(selectedComponentAtom);
   const [, setComponentProps] = useAtom(selectedComponentPropertiesAtom);
-
-  useEffect(() => {
-    setAvailableComponents(components);
-  }, [components]);
 
   function handleChange(event: JSX.TargetedEvent<HTMLInputElement>) {
     const newValue = event.currentTarget.value;
-    const componentPropsObject =
-      componentsObject[newValue as keyof typeof componentsObject];
-    if (componentPropsObject) {
-      setComponentProps(componentPropsObject);
+    const componentData = components[newValue];
+    if (componentData) {
+      setComponentProps(componentData);
     }
     setValue(newValue);
   }
+  
   return (
     <Dropdown
       onChange={handleChange}
@@ -43,7 +36,4 @@ export function DropdownComponent({
       placeholder="Select component..."
     />
   );
-}
-function createDropdownOptions(strings: string[]): Array<DropdownOption> {
-  return strings.map((str) => ({ value: str }));
 }

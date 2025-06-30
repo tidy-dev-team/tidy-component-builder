@@ -7,3 +7,4 @@ export const selectedComponentAtom = atom<string | null>((get) => {
 });
 
 export const selectedComponentPropertiesAtom = atom<any>({});
+export const propertyStatesAtom = atom<Record<string, boolean>>({});

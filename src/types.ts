@@ -10,12 +10,17 @@ export interface CloseHandler extends EventHandler {
   handler: () => void;
 }
 
+export interface DependentProperty {
+  name: string;
+  value: string;
+}
+
 export interface ComponentProperty {
   name: string;
   displayName: string;
   value: string | boolean;
   used: boolean;
-  dependentProperty?: string;
+  dependentProperty?: DependentProperty;
   variants?: string[];
 }
 

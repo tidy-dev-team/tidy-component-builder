@@ -4,9 +4,9 @@ import { h } from "preact";
 import { components } from "./componentData";
 import { useAtom } from "jotai";
 
-import { DropdownComponent } from "./ui components/Dropdown";
-import { CheckboxComponent } from "./ui components/Checkbox";
-import { ButtonComponent } from "./ui components/Button";
+import { DropdownComponent } from "./ui_components/Dropdown";
+import { CheckboxComponent } from "./ui_components/Checkbox";
+import { ButtonComponent } from "./ui_components/Button";
 import {
   selectedComponentPropertiesAtom,
   updatedComponentPropertiesAtom,
@@ -15,7 +15,7 @@ import {
 function Plugin() {
   const [componentProps] = useAtom(selectedComponentPropertiesAtom);
   const [updatedComponentProps] = useAtom(updatedComponentPropertiesAtom);
-  
+
   const propertyKeys = Object.keys(componentProps);
 
   function handleButtonClick() {

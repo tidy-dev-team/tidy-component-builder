@@ -1,4 +1,5 @@
 import { getPlaceholderIcon } from "./getPlaceholderIcon";
+import { addNewBooleanProperty } from "../../figma_functions/utils";
 
 const CHECKBOX_CONFIG = {
   SIZES: { s: 16, default: 20 },
@@ -97,13 +98,18 @@ export async function buildCheckboxOnCanvas(properties: any): Promise<void> {
   if (properties.icon?.used) {
     const icon = getPlaceholderIcon();
     const iconNode = figma.createNodeFromSvg(icon);
-    iconNode.name = "Checkbox Icon";
+    iconNode.name = "Placeholder Icon";
     const iconSize = size * CHECKBOX_CONFIG.ICON_SCALE;
     iconNode.resize(iconSize, iconSize);
     iconNode.x = (size - iconSize) / 2;
     iconNode.y = (size - iconSize) / 2;
     textRow.appendChild(iconNode);
-    checkboxFrame.addComponentProperty("icon", "BOOLEAN", true);
+    // addNewBooleanProperty(checkboxFrame, iconNode, "icon", true);
+    // checkboxFrame.addComponentProperty("icon", "BOOLEAN", true);
+    // const keys = Object.keys(checkboxFrame.componentPropertyDefinitions);
+    // const iconProp = keys.find((key) => key.startsWith("icon"));
+    // iconNode.componentPropertyReferences = { visible: iconProp };
+    // console.log(iconProp);
   }
 
   // Helper functions
@@ -231,6 +237,8 @@ export async function buildCheckboxOnCanvas(properties: any): Promise<void> {
 
   if (textColumn.children.length > 0) {
     checkboxFrame.appendChild(textColumn);
+    properties.label.used &&
+      addNewBooleanProperty(checkboxFrame, textColumn, "label", true);
   }
 
   // Add the frame to the current page

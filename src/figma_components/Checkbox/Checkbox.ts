@@ -1,8 +1,10 @@
 import { getPlaceholderIcon } from "./getPlaceholderIcon";
 import { addNewBooleanProperty } from "../../figma_functions/utils";
 import { ComponentProperties } from "../../types";
+import { createCheckboxSquare } from "./createCheckboxElementSquare";
+import { computeMaximumBounds } from "@create-figma-plugin/utilities";
 
-const CHECKBOX_CONFIG = {
+export const CHECKBOX_CONFIG = {
   SIZES: { s: 16, m: 20 },
   SPACING: { item: 8, text: 2 },
   CORNER_RADIUS: 4,
@@ -34,27 +36,12 @@ interface TextConfig {
   letterSpacing?: number;
 }
 
-type TextType = "label" | "count" | "description";
+type TextType = "label" | "count";
 type SizeVariant = "s" | "m";
 
 interface CheckboxSize {
   size: number;
   isSmall: boolean;
-}
-
-function createFrame(
-  name: string,
-  layoutMode: "HORIZONTAL" | "VERTICAL",
-  spacing: number
-): FrameNode {
-  const frame = figma.createFrame();
-  frame.name = name;
-  frame.layoutMode = layoutMode;
-  frame.itemSpacing = spacing;
-  frame.primaryAxisSizingMode = "AUTO";
-  frame.counterAxisSizingMode = "AUTO";
-  frame.fills = [];
-  return frame;
 }
 
 async function createStyledText(config: TextConfig): Promise<TextNode> {
@@ -99,44 +86,8 @@ function getTextConfig(
       opacity: 0.72,
       lineHeight: isSmall ? 14 : 16,
     },
-    description: {
-      name: "Description",
-      font: {
-        family: CHECKBOX_CONFIG.TYPOGRAPHY.family,
-        style: CHECKBOX_CONFIG.TYPOGRAPHY.styles.regular,
-      },
-      fontSize: isSmall ? 12 : 14,
-      color: CHECKBOX_CONFIG.COLORS.text.secondary,
-      opacity: 0.72,
-      lineHeight: isSmall ? 14 : 16,
-    },
   } as const;
   return { ...configs[type], value };
-}
-
-function createCheckboxSquare(size: number): RectangleNode {
-  const checkboxSquare = figma.createRectangle();
-  checkboxSquare.name = "Checkbox Square";
-  checkboxSquare.resize(size, size);
-  checkboxSquare.cornerRadius = CHECKBOX_CONFIG.CORNER_RADIUS;
-  checkboxSquare.fills = [
-    { type: "SOLID", color: CHECKBOX_CONFIG.COLORS.background },
-  ];
-  checkboxSquare.strokes = [
-    { type: "SOLID", color: CHECKBOX_CONFIG.COLORS.border },
-  ];
-  checkboxSquare.strokeWeight = CHECKBOX_CONFIG.STROKE_WEIGHT;
-  checkboxSquare.effects = [
-    {
-      type: "DROP_SHADOW",
-      color: CHECKBOX_CONFIG.COLORS.shadow,
-      offset: { x: 0, y: 1 },
-      radius: 2,
-      visible: true,
-      blendMode: "NORMAL",
-    },
-  ];
-  return checkboxSquare;
 }
 
 function createCheckboxComponent(sizeVariant: SizeVariant): ComponentNode {
@@ -146,6 +97,7 @@ function createCheckboxComponent(sizeVariant: SizeVariant): ComponentNode {
   checkboxFrame.itemSpacing = CHECKBOX_CONFIG.SPACING.item;
   checkboxFrame.primaryAxisSizingMode = "AUTO";
   checkboxFrame.counterAxisSizingMode = "AUTO";
+  checkboxFrame.counterAxisAlignItems = "CENTER"; // Center align all children
   checkboxFrame.paddingLeft = 0;
   checkboxFrame.paddingRight = 0;
   checkboxFrame.paddingTop = 0;
@@ -168,42 +120,24 @@ async function createCheckboxVariant(
 ): Promise<ComponentNode> {
   const checkboxFrame = createCheckboxComponent(sizeVariant);
   const checkboxSize = getCheckboxSize(sizeVariant);
+
+  // Add checkbox square as direct child
   const checkboxSquare = createCheckboxSquare(checkboxSize.size);
-
-  const textRow = createFrame(
-    "Text Row",
-    "HORIZONTAL",
-    CHECKBOX_CONFIG.SPACING.item
-  );
-  textRow.layoutSizingVertical = "HUG";
-
-  const textColumn = createFrame(
-    "Text Column",
-    "VERTICAL",
-    CHECKBOX_CONFIG.SPACING.text
-  );
-
-  // Add checkbox square
   checkboxFrame.appendChild(checkboxSquare);
 
-  // Add icon if needed (for property setup)
+  // Add icon as direct child if needed
   if (properties.icon?.used) {
     const icon = getPlaceholderIcon();
     const iconNode = figma.createNodeFromSvg(icon);
     iconNode.name = "Icon";
     const iconSize = checkboxSize.size * CHECKBOX_CONFIG.ICON_SCALE;
     iconNode.resize(iconSize, iconSize);
-    iconNode.x = (checkboxSize.size - iconSize) / 2;
-    iconNode.y = (checkboxSize.size - iconSize) / 2;
-    iconNode.visible = false; // Hidden by default
+    iconNode.visible = true; // Visible by default
     checkboxFrame.appendChild(iconNode);
-    addNewBooleanProperty(checkboxFrame, iconNode, "icon", false);
+    addNewBooleanProperty(checkboxFrame, iconNode, "icon", true);
   }
 
-  // Create text elements based on properties
-  const hasRowText = properties.label?.used || properties.count?.used;
-  const hasColumnText = properties.description?.used;
-
+  // Add label as direct child if needed
   if (properties.label?.used) {
     const labelText = await createStyledText(
       getTextConfig(
@@ -212,9 +146,11 @@ async function createCheckboxVariant(
         checkboxSize
       )
     );
-    textRow.appendChild(labelText);
+    checkboxFrame.appendChild(labelText);
+    addNewBooleanProperty(checkboxFrame, labelText, "label", true);
   }
 
+  // Add count as direct child if needed
   if (properties.count?.used) {
     const countText = await createStyledText(
       getTextConfig(
@@ -223,26 +159,8 @@ async function createCheckboxVariant(
         checkboxSize
       )
     );
-    textRow.appendChild(countText);
-  }
-
-  if (hasRowText) {
-    textColumn.appendChild(textRow);
-  }
-
-  if (properties.description?.used) {
-    const descText = await createStyledText(
-      getTextConfig(
-        "description",
-        properties.description?.value?.toString() || "(No description)",
-        checkboxSize
-      )
-    );
-    textColumn.appendChild(descText);
-  }
-
-  if (hasRowText || hasColumnText) {
-    checkboxFrame.appendChild(textColumn);
+    checkboxFrame.appendChild(countText);
+    addNewBooleanProperty(checkboxFrame, countText, "count", true);
   }
 
   return checkboxFrame;
@@ -251,8 +169,6 @@ async function createCheckboxVariant(
 export async function buildCheckboxOnCanvas(
   properties: ComponentProperties
 ): Promise<void> {
-  // Create component set
-
   // Create both size variants
   const smallCheckbox = await createCheckboxVariant("s", properties);
   const mediumCheckbox = await createCheckboxVariant("m", properties);
@@ -266,6 +182,9 @@ export async function buildCheckboxOnCanvas(
 
   // Position variants side by side
   mediumCheckbox.x = smallCheckbox.width + 20;
+  const [min, max] = computeMaximumBounds(componentSet.children as SceneNode[]);
+  console.log("Computed bounds:", { min, max });
+  componentSet.resize(max.x - min.x, max.y - min.y);
 
   // Add to page and center
   figma.currentPage.appendChild(componentSet);

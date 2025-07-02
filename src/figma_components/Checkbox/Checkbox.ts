@@ -103,6 +103,7 @@ export async function buildCheckboxOnCanvas(properties: any): Promise<void> {
     iconNode.x = (size - iconSize) / 2;
     iconNode.y = (size - iconSize) / 2;
     textRow.appendChild(iconNode);
+    checkboxFrame.addComponentProperty("icon", "BOOLEAN", true);
   }
 
   // Helper functions

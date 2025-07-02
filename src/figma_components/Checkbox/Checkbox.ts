@@ -3,7 +3,7 @@ import { addNewBooleanProperty } from "../../figma_functions/utils";
 import { ComponentProperties } from "../../types";
 
 const CHECKBOX_CONFIG = {
-  SIZES: { s: 16, default: 20 },
+  SIZES: { s: 16, m: 20 },
   SPACING: { item: 8, text: 2 },
   CORNER_RADIUS: 4,
   STROKE_WEIGHT: 1,
@@ -35,6 +35,7 @@ interface TextConfig {
 }
 
 type TextType = "label" | "count" | "description";
+type SizeVariant = "s" | "m";
 
 interface CheckboxSize {
   size: number;
@@ -138,9 +139,9 @@ function createCheckboxSquare(size: number): RectangleNode {
   return checkboxSquare;
 }
 
-function createCheckboxFrame(): ComponentNode {
+function createCheckboxComponent(sizeVariant: SizeVariant): ComponentNode {
   const checkboxFrame = figma.createComponent();
-  checkboxFrame.name = "Checkbox";
+  checkboxFrame.name = `Size=${sizeVariant}`;
   checkboxFrame.layoutMode = "HORIZONTAL";
   checkboxFrame.itemSpacing = CHECKBOX_CONFIG.SPACING.item;
   checkboxFrame.primaryAxisSizingMode = "AUTO";
@@ -153,40 +154,22 @@ function createCheckboxFrame(): ComponentNode {
   return checkboxFrame;
 }
 
-function addIconToCheckbox(size: number, textRow: FrameNode): void {
-  const icon = getPlaceholderIcon();
-  const iconNode = figma.createNodeFromSvg(icon);
-  iconNode.name = "Placeholder Icon";
-  const iconSize = size * CHECKBOX_CONFIG.ICON_SCALE;
-  iconNode.resize(iconSize, iconSize);
-  iconNode.x = (size - iconSize) / 2;
-  iconNode.y = (size - iconSize) / 2;
-  textRow.appendChild(iconNode);
-}
-
-function getCheckboxSize(properties: ComponentProperties): CheckboxSize {
-  const size = properties.size?.value === "s" 
-    ? CHECKBOX_CONFIG.SIZES.s 
-    : CHECKBOX_CONFIG.SIZES.default;
+function getCheckboxSize(sizeVariant: SizeVariant): CheckboxSize {
+  const size = CHECKBOX_CONFIG.SIZES[sizeVariant];
   return {
     size,
-    isSmall: size === CHECKBOX_CONFIG.SIZES.s
+    isSmall: sizeVariant === "s",
   };
 }
 
-function isPropertyUsed(properties: ComponentProperties, propertyName: string): boolean {
-  return properties[propertyName]?.used === true;
-}
-
-function getPropertyValue(properties: ComponentProperties, propertyName: string, defaultValue: string = ""): string {
-  return properties[propertyName]?.value?.toString() || defaultValue;
-}
-
-export async function buildCheckboxOnCanvas(properties: ComponentProperties): Promise<void> {
-  const checkboxFrame = createCheckboxFrame();
-  const checkboxSize = getCheckboxSize(properties);
+async function createCheckboxVariant(
+  sizeVariant: SizeVariant,
+  properties: ComponentProperties
+): Promise<ComponentNode> {
+  const checkboxFrame = createCheckboxComponent(sizeVariant);
+  const checkboxSize = getCheckboxSize(sizeVariant);
   const checkboxSquare = createCheckboxSquare(checkboxSize.size);
-  
+
   const textRow = createFrame(
     "Text Row",
     "HORIZONTAL",
@@ -200,31 +183,43 @@ export async function buildCheckboxOnCanvas(properties: ComponentProperties): Pr
     CHECKBOX_CONFIG.SPACING.text
   );
 
+  // Add checkbox square
   checkboxFrame.appendChild(checkboxSquare);
 
-  if (isPropertyUsed(properties, "icon")) {
-    addIconToCheckbox(checkboxSize.size, textRow);
+  // Add icon if needed (for property setup)
+  if (properties.icon?.used) {
+    const icon = getPlaceholderIcon();
+    const iconNode = figma.createNodeFromSvg(icon);
+    iconNode.name = "Icon";
+    const iconSize = checkboxSize.size * CHECKBOX_CONFIG.ICON_SCALE;
+    iconNode.resize(iconSize, iconSize);
+    iconNode.x = (checkboxSize.size - iconSize) / 2;
+    iconNode.y = (checkboxSize.size - iconSize) / 2;
+    iconNode.visible = false; // Hidden by default
+    checkboxFrame.appendChild(iconNode);
+    addNewBooleanProperty(checkboxFrame, iconNode, "icon", false);
   }
 
-  const hasRowText = isPropertyUsed(properties, "label") || isPropertyUsed(properties, "count");
-  const hasColumnText = isPropertyUsed(properties, "description");
+  // Create text elements based on properties
+  const hasRowText = properties.label?.used || properties.count?.used;
+  const hasColumnText = properties.description?.used;
 
-  if (isPropertyUsed(properties, "label")) {
+  if (properties.label?.used) {
     const labelText = await createStyledText(
       getTextConfig(
         "label",
-        getPropertyValue(properties, "label", "Checkbox"),
+        properties.label?.value?.toString() || "Checkbox",
         checkboxSize
       )
     );
     textRow.appendChild(labelText);
   }
 
-  if (isPropertyUsed(properties, "count")) {
+  if (properties.count?.used) {
     const countText = await createStyledText(
       getTextConfig(
         "count",
-        getPropertyValue(properties, "count", "(0)"),
+        properties.count?.value?.toString() || "(0)",
         checkboxSize
       )
     );
@@ -235,11 +230,11 @@ export async function buildCheckboxOnCanvas(properties: ComponentProperties): Pr
     textColumn.appendChild(textRow);
   }
 
-  if (isPropertyUsed(properties, "description")) {
+  if (properties.description?.used) {
     const descText = await createStyledText(
       getTextConfig(
         "description",
-        getPropertyValue(properties, "description", "(No description)"),
+        properties.description?.value?.toString() || "(No description)",
         checkboxSize
       )
     );
@@ -248,13 +243,33 @@ export async function buildCheckboxOnCanvas(properties: ComponentProperties): Pr
 
   if (hasRowText || hasColumnText) {
     checkboxFrame.appendChild(textColumn);
-    if (isPropertyUsed(properties, "label")) {
-      addNewBooleanProperty(checkboxFrame, textColumn, "label", true);
-    }
   }
 
-  figma.currentPage.appendChild(checkboxFrame);
-  figma.viewport.scrollAndZoomIntoView([checkboxFrame]);
-  
-  console.log("Checkbox built on canvas with properties:", properties);
+  return checkboxFrame;
+}
+
+export async function buildCheckboxOnCanvas(
+  properties: ComponentProperties
+): Promise<void> {
+  // Create component set
+
+  // Create both size variants
+  const smallCheckbox = await createCheckboxVariant("s", properties);
+  const mediumCheckbox = await createCheckboxVariant("m", properties);
+
+  // Add variants to component set
+  const componentSet = figma.combineAsVariants(
+    [smallCheckbox, mediumCheckbox],
+    figma.currentPage
+  );
+  componentSet.name = "Checkbox";
+
+  // Position variants side by side
+  mediumCheckbox.x = smallCheckbox.width + 20;
+
+  // Add to page and center
+  figma.currentPage.appendChild(componentSet);
+  figma.viewport.scrollAndZoomIntoView([componentSet]);
+
+  console.log("Checkbox component set built with properties:", properties);
 }

@@ -1,5 +1,6 @@
 import { getPlaceholderIcon } from "./getPlaceholderIcon";
 import { addNewBooleanProperty } from "../../figma_functions/utils";
+import { ComponentProperties } from "../../types";
 
 const CHECKBOX_CONFIG = {
   SIZES: { s: 16, default: 20 },
@@ -20,7 +21,7 @@ const CHECKBOX_CONFIG = {
     family: "Inter",
     styles: { medium: "Medium", regular: "Regular" },
   },
-};
+} as const;
 
 interface TextConfig {
   name: string;
@@ -33,32 +34,89 @@ interface TextConfig {
   letterSpacing?: number;
 }
 
-export async function buildCheckboxOnCanvas(properties: any): Promise<void> {
-  // Create a frame to contain the checkbox and label
-  const checkboxFrame = figma.createComponent();
-  checkboxFrame.name = "Checkbox";
-  checkboxFrame.layoutMode = "HORIZONTAL";
-  checkboxFrame.itemSpacing = CHECKBOX_CONFIG.SPACING.item;
-  checkboxFrame.primaryAxisSizingMode = "AUTO";
-  checkboxFrame.counterAxisSizingMode = "AUTO";
-  checkboxFrame.paddingLeft = 0;
-  checkboxFrame.paddingRight = 0;
-  checkboxFrame.paddingTop = 0;
-  checkboxFrame.paddingBottom = 0;
-  checkboxFrame.fills = [];
+type TextType = "label" | "count" | "description";
 
-  // Create the checkbox square
+interface CheckboxSize {
+  size: number;
+  isSmall: boolean;
+}
+
+function createFrame(
+  name: string,
+  layoutMode: "HORIZONTAL" | "VERTICAL",
+  spacing: number
+): FrameNode {
+  const frame = figma.createFrame();
+  frame.name = name;
+  frame.layoutMode = layoutMode;
+  frame.itemSpacing = spacing;
+  frame.primaryAxisSizingMode = "AUTO";
+  frame.counterAxisSizingMode = "AUTO";
+  frame.fills = [];
+  return frame;
+}
+
+async function createStyledText(config: TextConfig): Promise<TextNode> {
+  await figma.loadFontAsync(config.font);
+  const text = figma.createText();
+  text.name = config.name;
+  text.fontName = config.font;
+  text.characters = config.value;
+  text.fontSize = config.fontSize;
+  text.fills = [{ type: "SOLID", color: config.color }];
+  text.opacity = config.opacity || 1;
+  text.lineHeight = { unit: "PIXELS", value: config.lineHeight };
+  text.letterSpacing = { unit: "PERCENT", value: config.letterSpacing || 0 };
+  return text;
+}
+
+function getTextConfig(
+  type: TextType,
+  value: string,
+  { size, isSmall }: CheckboxSize
+): TextConfig {
+  const configs = {
+    label: {
+      name: "Label",
+      font: {
+        family: CHECKBOX_CONFIG.TYPOGRAPHY.family,
+        style: CHECKBOX_CONFIG.TYPOGRAPHY.styles.medium,
+      },
+      fontSize: isSmall ? 14 : 16,
+      color: CHECKBOX_CONFIG.COLORS.text.primary,
+      opacity: 0.96,
+      lineHeight: isSmall ? 18 : 20,
+    },
+    count: {
+      name: "Count",
+      font: {
+        family: CHECKBOX_CONFIG.TYPOGRAPHY.family,
+        style: CHECKBOX_CONFIG.TYPOGRAPHY.styles.medium,
+      },
+      fontSize: isSmall ? 12 : 14,
+      color: CHECKBOX_CONFIG.COLORS.text.secondary,
+      opacity: 0.72,
+      lineHeight: isSmall ? 14 : 16,
+    },
+    description: {
+      name: "Description",
+      font: {
+        family: CHECKBOX_CONFIG.TYPOGRAPHY.family,
+        style: CHECKBOX_CONFIG.TYPOGRAPHY.styles.regular,
+      },
+      fontSize: isSmall ? 12 : 14,
+      color: CHECKBOX_CONFIG.COLORS.text.secondary,
+      opacity: 0.72,
+      lineHeight: isSmall ? 14 : 16,
+    },
+  } as const;
+  return { ...configs[type], value };
+}
+
+function createCheckboxSquare(size: number): RectangleNode {
   const checkboxSquare = figma.createRectangle();
   checkboxSquare.name = "Checkbox Square";
-
-  // Set size based on the size property
-  const size =
-    properties.size?.property?.value === "s"
-      ? CHECKBOX_CONFIG.SIZES.s
-      : CHECKBOX_CONFIG.SIZES.default;
   checkboxSquare.resize(size, size);
-
-  // Style the checkbox to match Kido DS (Figma Dev Mode MCP)
   checkboxSquare.cornerRadius = CHECKBOX_CONFIG.CORNER_RADIUS;
   checkboxSquare.fills = [
     { type: "SOLID", color: CHECKBOX_CONFIG.COLORS.background },
@@ -77,7 +135,58 @@ export async function buildCheckboxOnCanvas(properties: any): Promise<void> {
       blendMode: "NORMAL",
     },
   ];
-  // Create text containers
+  return checkboxSquare;
+}
+
+function createCheckboxFrame(): ComponentNode {
+  const checkboxFrame = figma.createComponent();
+  checkboxFrame.name = "Checkbox";
+  checkboxFrame.layoutMode = "HORIZONTAL";
+  checkboxFrame.itemSpacing = CHECKBOX_CONFIG.SPACING.item;
+  checkboxFrame.primaryAxisSizingMode = "AUTO";
+  checkboxFrame.counterAxisSizingMode = "AUTO";
+  checkboxFrame.paddingLeft = 0;
+  checkboxFrame.paddingRight = 0;
+  checkboxFrame.paddingTop = 0;
+  checkboxFrame.paddingBottom = 0;
+  checkboxFrame.fills = [];
+  return checkboxFrame;
+}
+
+function addIconToCheckbox(size: number, textRow: FrameNode): void {
+  const icon = getPlaceholderIcon();
+  const iconNode = figma.createNodeFromSvg(icon);
+  iconNode.name = "Placeholder Icon";
+  const iconSize = size * CHECKBOX_CONFIG.ICON_SCALE;
+  iconNode.resize(iconSize, iconSize);
+  iconNode.x = (size - iconSize) / 2;
+  iconNode.y = (size - iconSize) / 2;
+  textRow.appendChild(iconNode);
+}
+
+function getCheckboxSize(properties: ComponentProperties): CheckboxSize {
+  const size = properties.size?.value === "s" 
+    ? CHECKBOX_CONFIG.SIZES.s 
+    : CHECKBOX_CONFIG.SIZES.default;
+  return {
+    size,
+    isSmall: size === CHECKBOX_CONFIG.SIZES.s
+  };
+}
+
+function isPropertyUsed(properties: ComponentProperties, propertyName: string): boolean {
+  return properties[propertyName]?.used === true;
+}
+
+function getPropertyValue(properties: ComponentProperties, propertyName: string, defaultValue: string = ""): string {
+  return properties[propertyName]?.value?.toString() || defaultValue;
+}
+
+export async function buildCheckboxOnCanvas(properties: ComponentProperties): Promise<void> {
+  const checkboxFrame = createCheckboxFrame();
+  const checkboxSize = getCheckboxSize(properties);
+  const checkboxSquare = createCheckboxSquare(checkboxSize.size);
+  
   const textRow = createFrame(
     "Text Row",
     "HORIZONTAL",
@@ -91,161 +200,61 @@ export async function buildCheckboxOnCanvas(properties: any): Promise<void> {
     CHECKBOX_CONFIG.SPACING.text
   );
 
-  // Add checkbox to frame
   checkboxFrame.appendChild(checkboxSquare);
 
-  // Add icon if enabled
-  if (properties.icon?.used) {
-    const icon = getPlaceholderIcon();
-    const iconNode = figma.createNodeFromSvg(icon);
-    iconNode.name = "Placeholder Icon";
-    const iconSize = size * CHECKBOX_CONFIG.ICON_SCALE;
-    iconNode.resize(iconSize, iconSize);
-    iconNode.x = (size - iconSize) / 2;
-    iconNode.y = (size - iconSize) / 2;
-    textRow.appendChild(iconNode);
-    // addNewBooleanProperty(checkboxFrame, iconNode, "icon", true);
-    // checkboxFrame.addComponentProperty("icon", "BOOLEAN", true);
-    // const keys = Object.keys(checkboxFrame.componentPropertyDefinitions);
-    // const iconProp = keys.find((key) => key.startsWith("icon"));
-    // iconNode.componentPropertyReferences = { visible: iconProp };
-    // console.log(iconProp);
+  if (isPropertyUsed(properties, "icon")) {
+    addIconToCheckbox(checkboxSize.size, textRow);
   }
 
-  // Helper functions
-  function createFrame(
-    name: string,
-    layoutMode: "HORIZONTAL" | "VERTICAL",
-    spacing: number
-  ) {
-    const frame = figma.createFrame();
-    frame.name = name;
-    frame.layoutMode = layoutMode;
-    frame.itemSpacing = spacing;
-    frame.primaryAxisSizingMode = "AUTO";
-    frame.counterAxisSizingMode = "AUTO";
-    frame.fills = [];
-    return frame;
-  }
+  const hasRowText = isPropertyUsed(properties, "label") || isPropertyUsed(properties, "count");
+  const hasColumnText = isPropertyUsed(properties, "description");
 
-  async function createStyledText(config: TextConfig) {
-    await figma.loadFontAsync(config.font);
-    const text = figma.createText();
-    text.name = config.name;
-    text.fontName = config.font;
-    text.characters = config.value;
-    text.fontSize = config.fontSize;
-    text.fills = [{ type: "SOLID", color: config.color }];
-    text.opacity = config.opacity || 1;
-    text.lineHeight = { unit: "PIXELS", value: config.lineHeight };
-    text.letterSpacing = { unit: "PERCENT", value: config.letterSpacing || 0 };
-    return text;
-  }
-
-  function getTextConfig(
-    type: "label" | "count" | "description",
-    value: string,
-    size: number
-  ): TextConfig {
-    const isSmall = size === CHECKBOX_CONFIG.SIZES.s;
-    const configs = {
-      label: {
-        name: "Label",
-        font: {
-          family: CHECKBOX_CONFIG.TYPOGRAPHY.family,
-          style: CHECKBOX_CONFIG.TYPOGRAPHY.styles.medium,
-        },
-        fontSize: isSmall ? 14 : 16,
-        color: CHECKBOX_CONFIG.COLORS.text.primary,
-        opacity: 0.96,
-        lineHeight: isSmall ? 18 : 20,
-      },
-      count: {
-        name: "Count",
-        font: {
-          family: CHECKBOX_CONFIG.TYPOGRAPHY.family,
-          style: CHECKBOX_CONFIG.TYPOGRAPHY.styles.medium,
-        },
-        fontSize: isSmall ? 12 : 14,
-        color: CHECKBOX_CONFIG.COLORS.text.secondary,
-        opacity: 0.72,
-        lineHeight: isSmall ? 14 : 16,
-      },
-      description: {
-        name: "Description",
-        font: {
-          family: CHECKBOX_CONFIG.TYPOGRAPHY.family,
-          style: CHECKBOX_CONFIG.TYPOGRAPHY.styles.regular,
-        },
-        fontSize: isSmall ? 12 : 14,
-        color: CHECKBOX_CONFIG.COLORS.text.secondary,
-        opacity: 0.72,
-        lineHeight: isSmall ? 14 : 16,
-      },
-    };
-    return { ...configs[type], value };
-  }
-
-  // Create text elements
-  const textElements: Array<{ element: any; container: "row" | "column" }> = [];
-
-  if (properties.label?.used) {
+  if (isPropertyUsed(properties, "label")) {
     const labelText = await createStyledText(
       getTextConfig(
         "label",
-        properties.label?.property?.value || "Checkbox",
-        size
+        getPropertyValue(properties, "label", "Checkbox"),
+        checkboxSize
       )
     );
-    textElements.push({ element: labelText, container: "row" });
+    textRow.appendChild(labelText);
   }
 
-  if (properties.count?.used) {
+  if (isPropertyUsed(properties, "count")) {
     const countText = await createStyledText(
       getTextConfig(
         "count",
-        String(properties.count?.property?.value ?? "(0)"),
-        size
+        getPropertyValue(properties, "count", "(0)"),
+        checkboxSize
       )
     );
-    textElements.push({ element: countText, container: "row" });
+    textRow.appendChild(countText);
   }
 
-  if (properties.description?.used) {
-    const descText = await createStyledText(
-      getTextConfig(
-        "description",
-        properties.description?.property?.value || "(No description)",
-        size
-      )
-    );
-    textElements.push({ element: descText, container: "column" });
-  }
-
-  // Organize text elements
-  const rowElements = textElements.filter((te) => te.container === "row");
-  const columnElements = textElements.filter((te) => te.container === "column");
-
-  if (rowElements.length > 0) {
-    rowElements.forEach((te) => textRow.appendChild(te.element));
+  if (hasRowText) {
     textColumn.appendChild(textRow);
   }
 
-  if (columnElements.length > 0) {
-    columnElements.forEach((te) => textColumn.appendChild(te.element));
+  if (isPropertyUsed(properties, "description")) {
+    const descText = await createStyledText(
+      getTextConfig(
+        "description",
+        getPropertyValue(properties, "description", "(No description)"),
+        checkboxSize
+      )
+    );
+    textColumn.appendChild(descText);
   }
 
-  if (textColumn.children.length > 0) {
+  if (hasRowText || hasColumnText) {
     checkboxFrame.appendChild(textColumn);
-    properties.label.used &&
+    if (isPropertyUsed(properties, "label")) {
       addNewBooleanProperty(checkboxFrame, textColumn, "label", true);
+    }
   }
 
-  // Add the frame to the current page
   figma.currentPage.appendChild(checkboxFrame);
-
-  // Center the checkbox in the viewport
   figma.viewport.scrollAndZoomIntoView([checkboxFrame]);
-
+  
   console.log("Checkbox built on canvas with properties:", properties);
 }

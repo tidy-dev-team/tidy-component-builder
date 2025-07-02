@@ -11,6 +11,7 @@ export interface CloseHandler extends EventHandler {
 }
 
 export interface DependentProperty {
+  kind: "text" | "instance swap";
   name: string;
   value: string;
 }

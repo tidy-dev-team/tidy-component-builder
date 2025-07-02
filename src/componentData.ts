@@ -1,4 +1,4 @@
-import { checkboxData } from "./componentData/checkboxData";
+import { checkboxData } from "./component_data/checkboxData";
 import { ComponentDataMap } from "./types";
 
 export const components: ComponentDataMap = {

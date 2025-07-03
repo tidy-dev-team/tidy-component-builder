@@ -4,9 +4,21 @@ import { ComponentProperties } from "../../types";
 import { createCheckboxSquare } from "./createCheckboxElementSquare";
 import { computeMaximumBounds } from "@create-figma-plugin/utilities";
 
+export const VARIANTS = {
+  size: ["s", "m"] as const,
+  state: ["idle", "hover", "pressed", "focused", "disabled"] as const,
+  selectionType: ["unchecked", "checked", "indeterminate"] as const,
+} as const;
+
+export type VariantKeys = keyof typeof VARIANTS;
+export type VariantValues<K extends VariantKeys> = (typeof VARIANTS)[K][number];
+export type SizeVariant = VariantValues<"size">;
+export type StateVariant = VariantValues<"state">;
+export type SelectionTypeVariant = VariantValues<"selectionType">;
+
 export const CHECKBOX_CONFIG = {
-  SIZES: { s: 16, m: 20 },
-  SPACING: { item: 8, text: 2 },
+  SIZES: { s: 16, m: 20 } as const,
+  SPACING: { item: 4 },
   CORNER_RADIUS: 4,
   STROKE_WEIGHT: 1,
   ICON_SCALE: 0.8,
@@ -37,7 +49,6 @@ interface TextConfig {
 }
 
 type TextType = "label" | "count";
-type SizeVariant = "s" | "m";
 
 interface CheckboxSize {
   size: number;
@@ -68,22 +79,20 @@ function getTextConfig(
       name: "Label",
       font: {
         family: CHECKBOX_CONFIG.TYPOGRAPHY.family,
-        style: CHECKBOX_CONFIG.TYPOGRAPHY.styles.medium,
+        style: CHECKBOX_CONFIG.TYPOGRAPHY.styles.regular,
       },
       fontSize: isSmall ? 14 : 16,
       color: CHECKBOX_CONFIG.COLORS.text.primary,
-      opacity: 0.96,
       lineHeight: isSmall ? 18 : 20,
     },
     count: {
       name: "Count",
       font: {
         family: CHECKBOX_CONFIG.TYPOGRAPHY.family,
-        style: CHECKBOX_CONFIG.TYPOGRAPHY.styles.medium,
+        style: CHECKBOX_CONFIG.TYPOGRAPHY.styles.regular,
       },
-      fontSize: isSmall ? 12 : 14,
+      fontSize: isSmall ? 14 : 16,
       color: CHECKBOX_CONFIG.COLORS.text.secondary,
-      opacity: 0.72,
       lineHeight: isSmall ? 14 : 16,
     },
   } as const;
@@ -155,7 +164,7 @@ async function createCheckboxVariant(
     const countText = await createStyledText(
       getTextConfig(
         "count",
-        properties.count?.value?.toString() || "(0)",
+        `(${properties.count?.value?.toString()})` || "(0)",
         checkboxSize
       )
     );
@@ -169,19 +178,20 @@ async function createCheckboxVariant(
 export async function buildCheckboxOnCanvas(
   properties: ComponentProperties
 ): Promise<void> {
-  // Create both size variants
-  const smallCheckbox = await createCheckboxVariant("s", properties);
-  const mediumCheckbox = await createCheckboxVariant("m", properties);
+  // Create all size variants from VARIANTS.size
+  const sizeVariants = VARIANTS.size;
+  const variantNodes: ComponentNode[] = [];
+
+  for (const sizeVariant of sizeVariants) {
+    const variantNode = await createCheckboxVariant(sizeVariant, properties);
+    variantNodes.push(variantNode);
+  }
 
   // Add variants to component set
-  const componentSet = figma.combineAsVariants(
-    [smallCheckbox, mediumCheckbox],
-    figma.currentPage
-  );
+  const componentSet = figma.combineAsVariants(variantNodes, figma.currentPage);
   componentSet.name = "Checkbox";
 
-  // Position variants side by side
-  mediumCheckbox.x = smallCheckbox.width + 20;
+  // Optionally, compute bounds and resize if needed
   const [min, max] = computeMaximumBounds(componentSet.children as SceneNode[]);
   console.log("Computed bounds:", { min, max });
   componentSet.resize(max.x - min.x, max.y - min.y);
